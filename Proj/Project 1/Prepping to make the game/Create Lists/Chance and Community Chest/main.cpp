@@ -44,16 +44,15 @@ int main(int argc, char** argv) {
        <<"Doctor's fees. Pay $50\n" //17
        <<"Pay school fees of $50\n" //18
        <<"Pay hospital fees of $50\n" //19
-       <<"Go back three spaces\n" //20
-       <<"Advance to Nearest Utility\n" //21
-       <<"Advance to Boardwalk\n" //22
-       <<"Take a trip to Reading Railroad\n" //23
-       <<"Advance to St. Charles Place\n" //24
-       <<"Advance to Illinois Avenue\n"; //25
+       <<"Advance to Water Works\n" //20
+       <<"Advance to Boardwalk\n" //21
+       <<"Take a trip to Reading Railroad\n" //22
+       <<"Advance to St. Charles Place\n" //23
+       <<"Advance to Illinois Avenue\n"; //24
 
     //Exit stage right!
     out.close();
     cout<<"communityChest.dat file has been created.\n";
-    cout<<"There are 25 cards.";
+    cout<<"There are 24 cards.";
     return 0;
 }

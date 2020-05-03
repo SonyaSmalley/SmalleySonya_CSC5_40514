@@ -33,20 +33,24 @@ int main(int argc, char** argv) {
     unsigned short gpP1, gpP2; //Game piece that players choose, delineated by a number
     unsigned short nGPs; //The number of game pieces to choose from
     unsigned char gpCh; //To verify the player's game piece (token) choice
-    short die1, die2, sumdie; //Two six-sided dice and their sum
+    short die1, die2, sumdie, doubles; //Two six-sided dice, their sum, and the count of doubles
     short spaceP1, spaceP2; //The spaces that players 1 and 2 are occupying
     int moneyP1, moneyP2; //Player funds
     bool jailP1, jailP2; //Player's state of freedom (are they in jail?)
     bool jCardP1, jCardP2; //Players can hold 1 Get Out of Jail Free card at a time
     char jChoice; //Players may choose how they try to get out of jail
     char jTrnP1, jTrnP2; //Keep track of how many turns in jail: max=3
+    string inProp, prop; //Read property names
+    unsigned short inOwn, owner; //Determine property owner 
     string inCard, card; //Read card descriptions
     unsigned short vCard; //Holds value of chosen cards
+    int inFees, fees; //Determine taxes and rents
     
     //Initialize Variables
     round=1;
     nGPs=13; //13 game pieces to choose from
     spaceP1=spaceP2=1; //All players start at Go (space 1)
+    doubles=0; //No one has rolled doubles at the start of the game
     jailP1=jailP2=false; //All players start free
     jTrnP1=jTrnP2=0; //Players start free
     jCardP1=jCardP2=false; //Players start with no Get Out of Jail Cards in their hands
@@ -109,7 +113,7 @@ int main(int argc, char** argv) {
     do
     {
         cout<<"Player 1, type the Enter key when you are ready to roll your dice\n"
-            <<"and Player 2 will roll theirs at the same time: ";
+            <<"and Player 2 will roll theirs at the same time:\n";
         cin.get();
         die1=(rand()%6)+1;
         die2=(rand()%(6-1+1))+1;
@@ -136,7 +140,7 @@ int main(int argc, char** argv) {
     //Player 1's turn    
         while (turn==1)
         {
-            cout<<"It is your turn, "<<p1<<" to play. Press enter to continue:\n";
+            cout<<"It is your turn to play. Press enter to continue:\n";
             cin.get();
             if (jailP1) //If Player 1 is in jail, do this...
             {   
@@ -195,11 +199,233 @@ int main(int argc, char** argv) {
                 }
                 while (jChoice!='P'&&jChoice!='C'&&jChoice!='R'); //In case they didn't choose a valid option
             }
-            else if (!jailP1)
+            else if (!jailP1) //Regular game play
             {
-                cout<<"Regular game play\n";
-                
+                do //Players can roll doubles twice in a turn without penalty
+                {
+                    //Roll the dice to move player token
+                    die1=(rand()%(6-1+1))+1;
+                    die2=(rand()%6)+1;
+                    sumdie=die1+die2;
+                    spaceP1+=sumdie;
+                    if (spaceP1>BOARD) //go round the board
+                    {
+                        spaceP1-=BOARD;
+                        if (spaceP1==1)
+                        {
+                            cout<<p1<<" landed on Go. Collect $200.\n";
+                            moneyP1+=200;
+                        }
+                        else
+                            cout<<p1<<" passed Go. Collect $200.\n";
+                        moneyP1+=200;
+                    }
+                    
+                    //What's the name of the space the player landed on?
+                    inFile.open("gameBoard.dat");
+                    for (int i=1;i<=40;i++)
+                    {
+                        getline(inFile,inProp);
+                        if (i==spaceP1)
+                            prop=inProp;
+                    }
+                    inFile.close();
+                    cout<<p1<<" landed on "<<prop<<".\n";
+                    
+                    //Who owns the property?
+                    inFile.open("owners2Players.dat");
+                    for (int i=1;i<=40;i++)
+                    {
+                        inFile>>inOwn;
+                        if (i==spaceP1)
+                            owner=inOwn;
+                    }
+                    inFile.close();
+                    
+                    //What does Player 1 do after landing on a space?
+                    switch (owner)
+                    {
+                        case 0:
+                            switch (spaceP1)
+                            {    
+                                case 5: //Income Tax
+                                    cout<<"You owe $200 in taxes.\n";
+                                    moneyP1-=200;
+                                    break;
+                                case 31: //Go to Jail
+                                    cout<<"You were caught doing nefarious things "
+                                        <<"and were sent to jail."<<endl;
+                                    cout<<"Do not pass Go. Do not collect $200.\n";
+                                    spaceP1=11;
+                                    jailP1=true;
+                                    cout<<"You're in jail, "<<p1<<".\n";
+                                    break;
+                                case 39: //Luxury Tax
+                                    cout<<"You owe $100 in taxes.\n";
+                                    moneyP1-=100;
+                                    break;
+                            }
+                            //If player lands on Chance
+                            if (spaceP1==8||spaceP1==23||spaceP1==37)
+                                cout<<p1<<" landed on Chance.\n";
+                            //If player lands on Community Chest
+                            if (spaceP1==3||spaceP1==18||spaceP1==34)
+                                cout<<p1<<" landed on Community Chest.\n";
+                            //If player lands on Chance or Community Chest
+                            if (spaceP1==8||spaceP1==23||spaceP1==37
+                                    ||spaceP1==3||spaceP1==18||spaceP1==34)
+                            {
+                                cout<<"Press enter to draw a card.\n";
+                                cin.get();
+                                inFile.open("cards.dat");
+                                vCard=(rand()%15)+1;
+                                while (vCard==jCardP1)
+                                    vCard=(rand()%15)+1;
+                                for (int i=1;i<=15;i++)
+                                {
+                                    getline(inFile,inCard);
+                                    if (i==vCard)
+                                        card=inCard;
+                                }
+                                inFile.close();
+                                cout<<"Your card reads...\n"; 
+                                cout<<card<<endl;
+                                if (vCard==1) //If the card is a Get Out of Jail Free card...
+                                {
+                                    jCardP1=true;
+                                    cout<<"Hold on to this card until it's needed.";
+                                }
+                                if (vCard==2) //If the card says to advance to jail...
+                                {
+                                    if (spaceP1>=11&&spaceP1<=40)
+                                    {
+                                        cout<<"You passed Go. Collect $200.\n";
+                                        moneyP1+=200;
+                                    }
+                                    spaceP1=11;
+                                    cout<<"You're just visiting.\n";
+                                }
+                                if (vCard==3) //If the card says to go to jail and not pass Go...
+                                {
+                                    if (spaceP1>=10&&spaceP1<=40)
+                                    {
+                                        cout<<"Do not pass Go. Do not collect $200.\n";
+                                    }
+                                    spaceP1=11;
+                                    jailP1=true;
+                                    cout<<"You're in jail.\n";
+                                }
+                                if (vCard==4)   //If it's your birthday...
+                                {
+                                    moneyP1+=10;
+                                    moneyP2-=10;
+                                }
+                                if (vCard==5)   //If you've been elected chairman...
+                                {
+                                    moneyP1-=50;
+                                    moneyP2+=50;
+                                }
+                                if (vCard>=6&&vCard<=8) //If the world gives you a little $$
+                                    moneyP1+=25;
+                                if (vCard>=9&&vCard<=15) //If the world gives you a bit more $$
+                                    moneyP1+=100;
+                                if (vCard>=16&&vCard<=19) //If you owe someone some $$
+                                    moneyP1-=50;
+                                if (vCard==20) //If you have to go to Water Works
+                                {
+                                    if (spaceP1>=29&&spaceP1<=40)
+                                    {
+                                        cout<<"You passed Go. Collect $200.\n";
+                                        moneyP1+=200;
+                                    }
+                                    spaceP1=29;
+                                    cout<<"You've arrived at Water Works.\n";
+                                }
+                                if (vCard==21) //If you have to go to Boardwalk
+                                {
+                                    if (spaceP1==40)
+                                    {
+                                        cout<<"You passed Go. Collect $200.\n";
+                                        moneyP1+=200;
+                                    }
+                                    spaceP1=29;
+                                    cout<<"You've arrived at Water Works.\n";
+                                }
+                                if (vCard==22) //If you have to go to Reading Railroad
+                                {
+                                    if (spaceP1>=6&&spaceP1<=40)
+                                    {
+                                        cout<<"You passed Go. Collect $200.\n";
+                                        moneyP1+=200;
+                                    }
+                                    spaceP1=6;
+                                    cout<<"You've arrived at Reading Railroad.\n";
+                                }
+                                if (vCard==23) //If you have to go to St. Charles Place
+                                {
+                                    if (spaceP1>=12&&spaceP1<=40)
+                                    {
+                                        cout<<"You passed Go. Collect $200.\n";
+                                        moneyP1+=200;
+                                    }
+                                    spaceP1=12;
+                                    cout<<"You've arrived at St. Charles Place.\n";
+                                }
+                                if (vCard==24) //If you have to go to Illinois Avenue
+                                {
+                                    if (spaceP1>=25&&spaceP1<=40)
+                                    {
+                                        cout<<"You passed Go. Collect $200.\n";
+                                        moneyP1+=200;
+                                    }
+                                    spaceP1=25;
+                                    cout<<"You've arrived at Illinois Avenue.\n";
+                                }
+                            }
+                            break;
+                        case 1:
+                            cout<<"You own that property.\n";
+                            break;
+                        case 2:
+                            //How much are fees for that property?
+                            inFile.open("taxesandRents.dat");
+                            for (int i=1;i<=40;i++)
+                            {
+                                inFile>>inFees;
+                                if (i==spaceP1)
+                                    fees=inFees;
+                            }
+                            inFile.close();
+                            cout<<p2<<" owns that property. You owe $"
+                                <<fees<<"in rent.\n";
+                            moneyP1-=fees; //pay 20 dollars
+                            moneyP2+=fees;
+                            cout<<"You have $"<<moneyP1<<" left in your account.\n";
+                            break;
+                    }
+                    if (die1==die2) //If doubles rolled
+                    {
+                        doubles++;
+                        cout<<"You rolled doubles. Please roll again.\n";
+                    }
+                    else
+                        doubles=0;
+                }
+                while(doubles>0&&doubles<3&&jailP1==false);
+                if (doubles==3) //rolling doubles 3 times in a turn earns jail time
+                {
+                    cout<<"You have been caught in a nefarious act (rolling 3 doubles)"
+                        <<"and have been sent to jail.\n";
+                    cout<<"Stay in jail for 3 turns or until you roll doubles."<<endl
+                        <<"If you do not roll doubles by the third turn, "
+                        <<"pay $50 and get out of jail.\n";
+                    cout<<"You may pay $50 or produce a Get Out of Jail Free"
+                        <<" card at any time to get out of jail earlier.\n"<<endl;
+                    spaceP1=31;
+                    jailP1=true;
+                }
             }
+            doubles=0;
             turn=2;
         }
     //Player 2's turn
@@ -256,18 +482,241 @@ int main(int argc, char** argv) {
                         break;
                 }
             }
-            else if (!jailP1)
+            else if (!jailP2)
             {
-                cout<<"Regular game play\n";
-                
+                do //Players can roll doubles twice in a turn without penalty
+                {
+                    //Roll the dice to move player token
+                    die1=(rand()%(6-1+1))+1;
+                    die2=(rand()%6)+1;
+                    sumdie=die1+die2;
+                    spaceP2+=sumdie;
+                    if (spaceP2>BOARD) //go round the board
+                    {
+                        spaceP2-=BOARD;
+                        if (spaceP2==1)
+                        {
+                            cout<<p2<<" landed on Go and collected $200.\n";
+                            moneyP2+=200;
+                        }
+                        else
+                            cout<<p1<<" passed Go and collected $200.\n";
+                        moneyP2+=200;
+                    }
+                    
+                    //What's the name of the space the player landed on?
+                    inFile.open("gameBoard.dat");
+                    for (int i=1;i<=40;i++)
+                    {
+                        getline(inFile,inProp);
+                        if (i==spaceP2)
+                            prop=inProp;
+                    }
+                    inFile.close();
+                    cout<<p2<<" landed on "<<prop<<".\n";
+                    
+                    //Who owns the property?
+                    inFile.open("owners2Players.dat");
+                    for (int i=1;i<=40;i++)
+                    {
+                        inFile>>inOwn;
+                        if (i==spaceP2)
+                            owner=inOwn;
+                    }
+                    inFile.close();
+                    
+                    //What does Player 2 do after landing on a space?
+                    switch (owner)
+                    {
+                        case 0:
+                            switch (spaceP2)
+                            {    
+                                case 5: //Income Tax
+                                    cout<<p2<<"owes $200 in taxes.\n";
+                                    moneyP2-=200;
+                                    break;
+                                case 31: //Go to Jail
+                                    cout<<p2<<" was caught doing nefarious things "
+                                        <<"and was sent to jail."<<endl;
+                                    cout<<"Do not pass Go. Do not collect $200.\n";
+                                    spaceP2=11;
+                                    jailP2=true;
+                                    cout<<p2<<" is in jail.\n";
+                                    break;
+                                case 39: //Luxury Tax
+                                    cout<<p2<<" owes $100 in taxes.\n";
+                                    moneyP2-=100;
+                                    break;
+                            }
+                            //If player lands on Chance
+                            if (spaceP2==8||spaceP2==23||spaceP2==37)
+                                cout<<p1<<" landed on Chance.\n";
+                            //If player lands on Community Chest
+                            if (spaceP2==3||spaceP2==18||spaceP2==34)
+                                cout<<p1<<" landed on Community Chest.\n";
+                            //If player lands on Chance or Community Chest
+                            //If player lands on Chance or Community Chest
+                            if (spaceP2==8||spaceP2==23||spaceP2==37
+                                    ||spaceP2==3||spaceP2==18||spaceP2==34)
+                            {
+                                inFile.open("cards.dat");
+                                vCard=(rand()%15)+1;
+                                while (vCard==jCardP2)
+                                    vCard=(rand()%15)+1;
+                                for (int i=1;i<=15;i++)
+                                {
+                                    getline(inFile,inCard);
+                                    if (i==vCard)
+                                        card=inCard;
+                                }
+                                inFile.close();
+                                cout<<p2<<"'s card reads...\n"; 
+                                cout<<card<<endl;
+                                if (vCard==1) //If the card is a Get Out of Jail Free card...
+                                {
+                                    jCardP2=true;
+                                    cout<<p2<<"will hold on to this card until it's needed.";
+                                }
+                                if (vCard==2) //If the card says to advance to jail...
+                                {
+                                    if (spaceP2>=11&&spaceP2<=40)
+                                    {
+                                        cout<<p2<<" passed Go and collected $200.\n";
+                                        moneyP2+=200;
+                                    }
+                                    spaceP2=11;
+                                    cout<<p2<<" is just visiting the jailhouse.\n";
+                                }
+                                if (vCard==3) //If the card says to go to jail and not pass Go...
+                                {
+                                    spaceP2=11;
+                                    jailP2=true;
+                                    cout<<p2<<" is in jail.\n";
+                                }
+                                if (vCard==4)   //If it's your birthday...
+                                {
+                                    moneyP2+=10;
+                                    moneyP1-=10;
+                                }
+                                if (vCard==5)   //If you've been elected chairman...
+                                {
+                                    moneyP2-=50;
+                                    moneyP1+=50;
+                                }
+                                if (vCard>=6&&vCard<=8) //If the world gives you a little $$
+                                    moneyP2+=25;
+                                if (vCard>=9&&vCard<=15) //If the world gives you a bit more $$
+                                    moneyP2+=100;
+                                if (vCard>=16&&vCard<=19) //If you owe someone some $$
+                                    moneyP2-=50;
+                                if (vCard==20) //If you have to go to Water Works
+                                {
+                                    if (spaceP2>=29&&spaceP2<=40)
+                                    {
+                                        cout<<p2<<" passed Go and collected $200.\n";
+                                        moneyP2+=200;
+                                    }
+                                    spaceP2=29;
+                                    cout<<p2<<" arrived at Water Works.\n";
+                                }
+                                if (vCard==21) //If you have to go to Boardwalk
+                                {
+                                    if (spaceP2==40)
+                                    {
+                                        cout<<p2<<" passed Go and collected $200.\n";
+                                        moneyP2+=200;
+                                    }
+                                    spaceP2=29;
+                                    cout<<p2<<" arrived at Water Works.\n";
+                                }
+                                if (vCard==22) //If you have to go to Reading Railroad
+                                {
+                                    if (spaceP2>=6&&spaceP2<=40)
+                                    {
+                                        cout<<p2<<" passed Go and collected $200.\n";
+                                        moneyP2+=200;
+                                    }
+                                    spaceP2=6;
+                                    cout<<p2<<" arrived at Reading Railroad.\n";
+                                }
+                                if (vCard==23) //If you have to go to St. Charles Place
+                                {
+                                    if (spaceP2>=12&&spaceP2<=40)
+                                    {
+                                        cout<<p2<<" passed Go and collected $200.\n";
+                                        moneyP2+=200;
+                                    }
+                                    spaceP2=12;
+                                    cout<<p2<<" arrived at St. Charles Place.\n";
+                                }
+                                if (vCard==24) //If you have to go to Illinois Avenue
+                                {
+                                    if (spaceP2>=25&&spaceP2<=40)
+                                    {
+                                        cout<<p2<<" passed Go and collected $200.\n";
+                                        moneyP2+=200;
+                                    }
+                                    spaceP2=25;
+                                    cout<<p2<<" arrived at Illinois Avenue.\n";
+                                }
+                            }
+                            break;
+                        case 1:
+                            cout<<"You, the "<<p1<<" own that property.\n";
+                            //How much are fees for that property?
+                            inFile.open("taxesandRents.dat");
+                            for (int i=1;i<=40;i++)
+                            {
+                                inFile>>inFees;
+                                if (i==spaceP2)
+                                    fees=inFees;
+                            }
+                            inFile.close();
+                            cout<<p2<<" owes $"<<fees<<" in rent.\n";
+                            moneyP2-=fees; //pay 20 dollars
+                            moneyP1+=fees;
+                            cout<<"You have $"<<moneyP1<<" left in your account.\n";
+                            break;
+                            break;
+                        case 2:
+                            cout<<p2<<" owns this property.\n";
+                            break;
+                    }
+                    if (die1==die2) //If doubles are rolled
+                    {
+                        doubles++;
+                        cout<<p2<<" rolled doubles and can roll again.\n";
+                    }
+                    else
+                        doubles=0;
+                }
+                while(doubles>0&&doubles<3&&jailP2==false);
+                if (doubles==3) //rolling doubles 3 times in a turn earns jail time
+                {
+                    cout<<p2<<" has been caught in a nefarious act (rolling 3 doubles)"
+                        <<"and has been sent to jail.\n";
+                    cout<<"They must stay in jail for 3 turns or until they roll doubles."<<endl
+                        <<"If they do not roll doubles by the third turn, "
+                        <<"they will pay $50 and get out of jail.\n";
+                    cout<<"They may pay $50 or produce a Get Out of Jail Free"
+                        <<" card at any time to get out of jail earlier.\n"<<endl;
+                    spaceP2=31;
+                    jailP2=true;
+                }
             }
-            
-            
+            doubles=0;
             turn=1;
         }
     }
     //End the game
-    while (round<=pow(2,3));                                                   //Fix this!!!!!!!!!!
+    while (round<floor(100.87)&&moneyP1>0&&moneyP2>0);
+    if (moneyP1<=0)
+        cout<<"Player 1, "<<p1<<", is bankrupt!!\n";
+    if (moneyP2<=0)
+        cout<<"Player 2, "<<p2<<", is bankrupt!!\n";
+    cout<<setw(15)<<"The game is over!"<<endl;
+    cout<<"Player 1 finished the game with $"<<moneyP1<<endl;
+    cout<<"Player 2 finished the game with $"<<moneyP2<<endl;
     
     //Exit stage right!
     return 0;

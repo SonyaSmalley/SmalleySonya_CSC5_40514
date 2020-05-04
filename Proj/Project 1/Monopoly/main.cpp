@@ -242,8 +242,10 @@ int main(int argc, char** argv) {
                             moneyP1+=200;
                         }
                         else
+                        {   
                             cout<<p1<<" passed Go. Collect $200.\n";
-                        moneyP1+=200;
+                            moneyP1+=200;
+                        }
                     }
                     
                     //What's the name of the space the player landed on?
@@ -545,8 +547,10 @@ int main(int argc, char** argv) {
                             moneyP2+=200;
                         }
                         else
+                        {
                             cout<<p1<<" passed Go and collected $200.\n";
-                        moneyP2+=200;
+                            moneyP2+=200;
+                        }
                     }
                     
                     //What's the name of the space the player landed on?

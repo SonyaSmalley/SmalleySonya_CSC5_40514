@@ -20,6 +20,9 @@ int roll();
 
 //Execution Begins Here
 int main(int argc, char** argv) {
+    //Set Random Number Seed Here
+    srand(static_cast<unsigned int>(time(0)));
+
     //Declare Variable Data Types and Constants
     int spaceP1, spaceP2;
     int round;
@@ -54,9 +57,6 @@ int main(int argc, char** argv) {
 
 int roll()
 {
-    //Set random number seed
-    srand(static_cast<unsigned int>(time(0)));
-    
     //Declare variable data types
     int die1,die2,sumdie;
     

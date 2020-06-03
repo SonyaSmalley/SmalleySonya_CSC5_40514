@@ -24,7 +24,7 @@ CLEAN_SUBPROJECTS=${CLEAN_SUBPROJECTS_${SUBPROJECTS}}
 
 
 # Project Name
-PROJECTNAME=Go to Jail v2
+PROJECTNAME=Get Out of Jail
 
 # Active Configuration
 DEFAULTCONF=Debug

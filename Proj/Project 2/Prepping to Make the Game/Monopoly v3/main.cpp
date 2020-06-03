@@ -58,6 +58,12 @@ void chkBank(const string player[],int money[],short turn);
 //* and turn tracking variable
 void passGo(const string player[],short space[],int money[],short turn);
 
+//* Allows players to try to get out of jail
+//* Provide player array, money array, jail array, jail card array,
+//* jail turn array, and turn tracking variable
+void outJail(const string player[],int money[],bool jail[],
+             bool jailCrd[],char jailTrn[],short turn);
+
 //* Prompts players to take a card and ensures required actions are taken.
 //* Provide player array, space array, money array, jail array, jail card array,
 //* number of individuals playing, and turn tracking variable
@@ -140,63 +146,12 @@ int main(int argc, char** argv) {
             if (jailP1) //If Player 1 is in jail, do this...
             {   
                 jTrnP1++; //Track how many times in a row the player is in jail
-                cout<<"You are languishing behind bars."<<endl;
+                if (p[turn]==0)
+                    cout<<"You are languishing behind bars."<<endl;
+                else
+                    cout<<p[turn]<<" is languishing behind bars."<<endl;
                 cout<<"It's time to get out of there!\n";
-                cout<<"Pay $50, use Get Out of Jail Free Card, or "
-                    <<"roll the dice?\n";
-                do //Try to get out of jail
-                {   
-                    cout<<"Enter P for pay, C for card, or R for roll: ";
-                    cin>>jChoice;
-                    cin.ignore();
-                    jChoice=(jChoice>=97?jChoice-32:jChoice); //Convert lower case to upper case
-                    switch (jChoice)
-                    {
-                        case 'P': //Pay to get out of jail
-                            moneyP1-=50;
-                            chkBank(p,moneyP,turn);
-                            cout<<"You have $"<<moneyP1<<" remaining in your account "
-                                <<"and now you're free!!\n"<<endl;
-                            jailP1=false;
-                            jTrnP1=0;
-                            break;
-                        case 'C': //Use player's Get Out of Jail Free card
-                            jailP1=false;
-                            jTrnP1=0;
-                            jCardP1=0;
-                            break;
-                        case 'R': //Roll to try to get out of jail
-                            cout<<"Press enter to roll the dice:\n"<<endl;
-                            cin.get();
-                            die1=(rand()%(6-1+1))+1;
-                            die2=(rand()%6)+1;
-                            if (die1==die2) //They roll doubles and are freed
-                            {
-                                cout<<"You rolled a "<<die1<<" and a "<<die2<<".\n";
-                                cout<<"You rolled doubles and are released from jail.\n";
-                                cout<<p1<<", continue your turn as usual.\n"<<endl;
-                                jailP1=false;
-                                jTrnP1=0;
-                            }
-                            else if (die1!=die2 && (jTrnP1==1||jTrnP1==2)) //Didn't roll doubles & have tries left
-                            {
-                                cout<<"You rolled a "<<die1<<" and a "<<die2<<".\n";
-                                cout<<"Too bad. Try again next turn, "
-                                    <<p1<<".\n"<<endl;
-                            }
-                            else if (die1!=die2 && jTrnP1==3) //Didn't roll doubles but used all their tries
-                            {
-                                cout<<"No more tries left. Pay $50, "<<p1<<".\n"<<endl;
-                                jailP1=false;
-                                jTrnP1=0;
-                                moneyP1-=50;
-                                cout<<"You have $"<<moneyP1<<" remaining in your account.\n"<<endl;
-                            }
-                            break;
-                        default: cout<<"Invalid entry.\n";
-                    }
-                }
-                while (jChoice!='P'&&jChoice!='C'&&jChoice!='R'); //In case they didn't choose a valid option
+                outJail(p,moneyP,jailP,jCardP,jTrnP,turn);
             }
             else if (!jailP1) //Regular game play
             {
@@ -726,6 +681,132 @@ void passGo(const string player[],short space[],int money[],short turn)
         cout<<player[turn]<<" passed Go and collected $200.\n";
     money[turn]+=200;
     chkBank(player,money,turn);
+}
+
+//* Function that allows players to try to get out of jail
+void outJail(const string player[],int money[],bool jail[],
+             bool jailCrd[],char jailTrn[],short turn)
+{
+    //Declare Variable Data Types and Constants
+    char jChoice; //Players may choose how they try to get out of jail
+    short die1, die2, sumdie, doubles; //Two six-sided dice, their sum, and the count of doubles
+    
+//User tries to get out of jail
+    if (turn==0)
+    {
+        cout<<"Pay $50, use Get Out of Jail Free Card, or "
+            <<"roll the dice?\n";
+        do //User tries to get out of jail
+        {   
+            cout<<"Enter P for pay, C for card, or R for roll: ";
+            cin>>jChoice;
+            cin.ignore();
+            jChoice=(jChoice>=97?jChoice-32:jChoice); //Convert lower case to upper case
+            switch (jChoice)
+            {
+                case 'P': //Pay to get out of jail
+                    cout<<"You have been released from jail on good behavior.\n"<<endl;
+                    money[turn]-=50;
+                    chkBank(player,money,turn);
+                    jail[turn]=false;
+                    jailTrn[turn]=0;
+                    break;
+                case 'C': //Use player's Get Out of Jail Free card
+                    cout<<"You're out on parole!\n"<<endl;
+                    jail[turn]=false;
+                    jailTrn[turn]=0;
+                    jailCrd[turn]=0;
+                    break;
+                case 'R': //Roll to try to get out of jail
+                    cout<<"Press enter to roll the dice:\n";
+                    cin.get();
+                    die1=(rand()%(6-1+1))+1;
+                    die2=(rand()%6)+1;
+                    if (die1==die2) //They roll doubles and are freed
+                    {
+                        cout<<"You rolled a "<<die1<<" and a "<<die2<<".\n";
+                        cout<<"You rolled doubles and are released from jail.\n";
+                        cout<<player[turn]<<", continue your turn as usual.\n"<<endl;
+                        jail[turn]=false;
+                        jailTrn[turn]=0;
+                    }
+                    else if (die1!=die2 && (jailTrn[turn]==1||jailTrn[turn]==2))
+                        //Didn't roll doubles & have tries left
+                    {
+                        cout<<"You rolled a "<<die1<<" and a "<<die2<<".\n";
+                        cout<<"Too bad. Try again next turn, "
+                            <<player[turn]<<".\n"<<endl;
+                    }
+                    else if (die1!=die2 && jailTrn[turn]==3)
+                        //Didn't roll doubles but used all their tries
+                    {
+                        cout<<"No more tries left. Pay $50, "<<player[turn]<<".\n"<<endl;
+                        money[turn]-=50;
+                        chkBank(player,money,turn);
+                        jail[turn]=false;
+                        jailTrn[turn]=0;
+                    }
+                    break;
+                default: cout<<"Invalid entry.\n";
+            }
+        }
+        while (jChoice!='P'&&jChoice!='C'&&jChoice!='R'); //In case they didn't choose a valid option
+    }
+    
+//Players 2-8 try to get out of jail
+    else
+    {
+        //Player chooses how to get out of jail
+        jChoice=(rand()%3)+1;
+        cout<<player[turn]<<" chooses to "
+        <<(jChoice==1?"pay":jChoice==2?"use a card":"roll")<<".\n";
+        
+        //Action is taken to (try to) get out of jail
+        switch (jChoice)
+        {
+            case 1: //Pay to get out of jail
+                money[turn]-=50;
+                cout<<player[turn]<<" is freeeeeeee!!!!!!!!!!!!!!.\n"<<endl;
+                jail[turn]=false;
+                jailTrn[turn]=0;
+                chkBank(player,money,turn);
+                break;
+            case 2: //Use player's Get Out of Jail Free card
+                cout<<player[turn]<<" is out of jail!\n";
+                jail[turn]=false;
+                jailTrn[turn]=0;
+                jailCrd[turn]=0;
+                break;
+            case 3: //Roll to try to get out of jail
+                cout<<"Blow on the dice for luck by pressing enter:\n";
+                cin.get();
+                die1=(rand()%(6-1+1))+1;
+                die2=(rand()%6)+1;
+                if (die1==die2) //They roll doubles and are freed
+                {
+                    cout<<player[turn]<<" rolled a "<<die1<<" and a "<<die2<<".\n";
+                    cout<<"They rolled doubles and are released from jail.\n";
+                    cout<<player[turn]<<", continues their turn as usual.\n"<<endl;
+                    jail[turn]=false;
+                    jailTrn[turn]=0;
+                }
+                else if (die1!=die2 && (jailTrn[turn]==1||jailTrn[turn]==2)) //Didn't roll doubles & have tries left
+                {
+                    cout<<player[turn]<<" rolled a "<<die1<<" and a "<<die2<<".\n";
+                    cout<<"Too bad. They'll have to try again next turn.\n"<<endl;
+                }
+                else if (die1!=die2 && jailTrn[turn]==3) //Didn't roll doubles but used all their tries
+                {
+                    cout<<"No more tries left. "<<player[turn]
+                        <<"pays $50 nd gets out of jail.\n";
+                    jail[turn]=false;
+                    jailTrn[turn]=0;
+                    money[turn]-=50;
+                    chkBank(player,money,turn);
+                }
+                break;
+        }
+    }
 }
 
 //* Function prompts players to take a card and required actions are taken.

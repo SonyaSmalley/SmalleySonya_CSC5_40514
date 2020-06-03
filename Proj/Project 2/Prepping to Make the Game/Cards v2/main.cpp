@@ -21,7 +21,7 @@ const short MAXP=8;     //The maximum number of players is 8
 //* Provide player array, space array, and money array, jail card array,
 //* number of individuals playing, and turn tracking variable
 void drawCrd(const string player[],short space[],int money[],
-             bool jailCrd[],int numPlayers,short turn);
+             bool jailCrd[],bool jail[],int numPlayers,short turn);
 
 //* Takes a player past go.
 //* Provide player array, space array, and money array,
@@ -52,7 +52,7 @@ void flBlAry(bool a[],int numPlayers);
 
 int main(int argc, char** argv) {
     //Set Random Number seed
-
+    srand(static_cast<unsigned int>(time(0)));
 
     //Declare Variable Data Types and Constants
     int numP; //The number of players in the game
@@ -60,6 +60,7 @@ int main(int argc, char** argv) {
     string p[MAXP];  //Player[0] is the human user; player[1-7] are the computer
     short spaceP[MAXP]; //The spaces that players 1 and 2 are occupying
     int moneyP[MAXP]; //Player funds
+    bool jailP[MAXP]; //Player's state of freedom (are they in jail?)
     bool jCardP[MAXP]; //Players can hold 1 Get Out of Jail Free card at a time
     
     //Initialize Variables
@@ -68,51 +69,71 @@ int main(int argc, char** argv) {
     flShAry(spaceP,numP);
     flInAry(moneyP,numP);
     flBlAry(jCardP,numP);
+    flBlAry(jailP,numP);
     
     //Display Outputs
-    
+    for (int i=0;i<MAXP;i++)
+    {
+        turn=i;
+        chkBank(p,moneyP,turn);
+        passGo(p,moneyP,turn);
+        drawCrd(p,spaceP,moneyP,jCardP,jailP,numP,turn);
+    }
     
     //Exit stage right!
     return 0;
 }
 
-//* Fill Array with random names
+//* Fill player array with random names
 void flStAry(string player[],int numPlayers)
 {
-    string name;
-    
-    for (int i=0;i<numPlayers;i++)
-    {
-        cout<<"Enter a name: ";
-        cin>>name;
-        player[i]=name;
-    }
+    player[0]="Brian";
+    player[1]="Soraya";
+    player[2]="Sophie";
+    player[3]="Fauz";
+    player[4]="Raul";
+    player[5]="Arthur";
+    player[6]="Phong";
+    player[7]="Aramina";
 }
 
-//* Fill Array with random values
+//* Fill space array with random values
 void flShAry(short a[],int numPlayers)
 {
     for (int i=0;i<numPlayers;i++)
+    {
         a[i]=(rand()%40)+1;
+        cout<<i<<" = space "<<a[i]<<" ";
+    }
+    cout<<endl;
 }
 
-//* Fill Array with random values
+//* Fill money array with random values
 void flInAry(int a[],int numPlayers)
 {
     for (int i=0;i<numPlayers;i++)
+    {
         a[i]=(rand()%(2000-1000+1))+1000;
+        cout<<i<<" = $"<<a[i]<<" ";
+    }
+    cout<<endl;
 }
 
 //* Fill Array with random values
 void flBlAry(bool a[],int numPlayers)
 {
     for (int i=0;i<numPlayers;i++)
-        a[i]=0;
+    {
+        a[i]=false;
+        cout<<i<<" = "<<a[i]<<" ";
+    }
+    cout<<endl;
 }
 
 //* Check the amount of money in an account
 void chkBank(const string player[],int money[],short turn)
 {
+    cout<<"chkBank works"<<endl;
     cout<<"There is now $"<<money[turn]<<" in "
         <<player[turn]<<"'s account.\n"<<endl;
 }
@@ -127,13 +148,12 @@ void passGo(const string player[],int money[],short turn)
 
 //* Function prompts players to take a card and required actions are taken.
 void drawCrd(const string player[],short space[],int money[],
-             bool jailCrd[],int numPlayers,short turn)
+             bool jailCrd[],bool jail[],int numPlayers,short turn)
 {
     //Declare Variable Data Types and Constants
     ifstream inFile; //Bring in some files
-    int inFees, fees; //Determine taxes and rents
     string inCard, card; //Read card descriptions
-    unsigned short vCard; //Holds value of chosen cards
+    unsigned short vCard; //Holds location of chosen cards in the file
     
     //Draw a card
     cout<<player[turn]<<" must draw a card.\n";
@@ -172,35 +192,57 @@ void drawCrd(const string player[],short space[],int money[],
         if (space[turn]>=10&&space[turn]<=40)
             cout<<"Do not pass Go. Do not collect $200.\n";
         space[turn]=11;
-        jailCrd[turn]=true;
-        cout<<player[turn]<<" is in jail.\n"<<endl;
+        jail[turn]=true;
+        cout<<player[turn]<<"is a suspect for a crime and is now in jail.\n"<<endl;
     }
     if (vCard==4)   //If it's your birthday...
     {
-        money[turn]+=10;
-        money[!turn]-=10;
-        chkBank(player,money,numPlayers);
+        cout<<"the if works.";
+        money[turn]+=(10*(numPlayers-1));
+        cout<<money[turn]<<endl;
+        for (int i=0;i<numPlayers;i++)
+        {
+            if (i!=turn)
+                money[i]-=10;
+        }
+        chkBank(player,money,turn);
+        cout<<money[turn]<<endl;
     }
     if (vCard==5)   //If you've been elected chairman...
     {
-        money[turn]-=50;
-        money[turn]+=50;
-        chkBank(player,money,numPlayers);
+        cout<<"the if works.";
+        money[turn]-=(50*(numPlayers-1));
+        cout<<money[turn]<<endl;
+        for (int i=0;i<numPlayers;i++)
+        {
+            if (i!=turn)
+                money[i]+=50;
+        }
+        chkBank(player,money,turn);
+        cout<<money[turn]<<endl;
     }
     if (vCard>=6&&vCard<=8) //If the world gives you a little $$
     {
+        cout<<"the if works.";
         money[turn]+=25;
-        chkBank(player,money,numPlayers);
+        cout<<money[turn]<<endl;
+        chkBank(player,money,turn);
+        cout<<money[turn]<<endl;
     }
     if (vCard>=9&&vCard<=15) //If the world gives you a bit more $$
     {
+        cout<<"the if works.";
         money[turn]+=100;
-        chkBank(player,money,numPlayers);
+        cout<<money[turn]<<endl;
+        chkBank(player,money,turn);
     }
     if (vCard>=16&&vCard<=19) //If you owe someone some $$
     {
+        cout<<"the if works.";
         money[turn]-=50;
-        chkBank(player,money,numPlayers);
+        cout<<money[turn]<<endl;
+        chkBank(player,money,turn);
+        cout<<money[turn]<<endl;
     }
     if (vCard==20) //If you have to go to Water Works
     {

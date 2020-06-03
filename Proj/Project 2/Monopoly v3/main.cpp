@@ -41,6 +41,11 @@ void strtMny(int money[],int numPlayers);
 //* Provide money array and number of individuals playing
 void startJl(bool jail[],int numPlayers);
 
+//* Fill jail turn array to track how many turns a player is in jail
+//* with no Get Out of Jail Free cards in hand
+//* Provide money array and number of individuals playing
+void startJl(char jailTrn[],int numPlayers);
+
 //* Choose game pieces for players
 //* Provide player array and number of individuals playing
 void tokens(string player[],int numPlayers);
@@ -81,28 +86,20 @@ int main(int argc, char** argv) {
     long round; //Don't let this game go on for too long
     short turn; //Distinguish whose turn it is
     int numP; //The number of players in the game
-    string p[MAXP], p1, p2;  //Player[0] is the human user; player[1-7] are the computer
+    string p[MAXP];  //Player[0] is the human user; player[1-7] are the computer
     short die1, die2, sumdie, doubles; //Two six-sided dice, their sum, and the count of doubles
-    short spaceP[MAXP],spaceP1, spaceP2; //The spaces that players 1 and 2 are occupying
-    int moneyP[MAXP],moneyP1, moneyP2; //Player funds
+    short spaceP[MAXP]; //The spaces that players 1 and 2 are occupying
+    int moneyP[MAXP]; //Player funds
     int inFees, fees; //Determine taxes and rents
-    bool jailP[MAXP],jailP1, jailP2; //Player's state of freedom (are they in jail?)
-    bool jCardP[MAXP],jCardP1, jCardP2; //Players can hold 1 Get Out of Jail Free card at a time
-    char jChoice; //Players may choose how they try to get out of jail
-    char jTrnP[MAXP],jTrnP1, jTrnP2; //Keep track of how many turns in jail: max=3
+    bool jailP[MAXP]; //Player's state of freedom (are they in jail?)
+    bool jCardP[MAXP]; //Players can hold 1 Get Out of Jail Free card at a time
+    char jTrnP[MAXP]; //Keep track of how many turns in jail: max=3
     string inProp, prop; //Read property names
-    unsigned short inOwn, owner; //Determine property owner 
-    string inCard, card; //Read card descriptions
-    unsigned short vCard; //Holds value of chosen cards
+    unsigned short inOwn, owner; //Determine property owner
     
     //Initialize Variables
     round=1;
-    spaceP1=spaceP2=1; //All players start at Go (space 1)
     doubles=0; //No one has rolled doubles at the start of the game
-    jailP1=jailP2=false; //All players start free
-    jTrnP1=jTrnP2=0; //Players start free
-    jCardP1=jCardP2=false; //Players start with no Get Out of Jail Cards in their hands
-    moneyP1=moneyP2=1500; //All players start with $1500
     
     //Display introduction to the game
     intro();
@@ -143,17 +140,17 @@ int main(int argc, char** argv) {
             cout<<"-------------------------------------------------------------"<<endl;
             cout<<"It is your turn to play. Press enter to continue:\n";
             cin.get();
-            if (jailP1) //If Player 1 is in jail, do this...
+            if (jailP[turn]) //If Player 1 is in jail, do this...
             {   
-                jTrnP1++; //Track how many times in a row the player is in jail
-                if (p[turn]==0)
+                jTrnP[turn]++; //Track how many times in a row the player is in jail
+                if (turn==0)
                     cout<<"You are languishing behind bars."<<endl;
                 else
                     cout<<p[turn]<<" is languishing behind bars."<<endl;
                 cout<<"It's time to get out of there!\n";
                 outJail(p,moneyP,jailP,jCardP,jTrnP,turn);
             }
-            else if (!jailP1) //Regular game play
+            else if (!jailP[turn]) //Regular game play
             {
                 do //Players can roll doubles twice in a turn without penalty
                 {
@@ -161,21 +158,20 @@ int main(int argc, char** argv) {
                     die1=(rand()%(6-1+1))+1;
                     die2=(rand()%6)+1;
                     sumdie=die1+die2;
-                    spaceP1+=sumdie;
+                    spaceP[turn]+=sumdie;
                     cout<<"You rolled a "<<die1<<" and a "<<die2
                         <<" and moved ahead "<<sumdie<<" spaces.\n"<<endl;
-                    if (spaceP1>BOARD) //go round the board
+                    if (spaceP[turn]>BOARD) //go round the board
                     {
-                        spaceP1-=BOARD;
-                        if (spaceP1==1)
+                        spaceP[turn]-=BOARD;
+                        if (spaceP[turn]==1)
                         {
-                            cout<<"You, "<<p1<<", landed on Go. Collect $200.\n"<<endl;
-                            moneyP1+=200;
+                            passGo(p,spaceP,moneyP,turn);
                         }
                         else
                         {   
-                            cout<<p1<<" passed Go. Collect $200.\n";
-                            moneyP1+=200;
+                            cout<<p[turn]<<" passed Go. Collect $200.\n";
+                            moneyP[turn]+=200;
                         }
                     }
                     
@@ -184,18 +180,18 @@ int main(int argc, char** argv) {
                     for (int i=1;i<=40;i++)
                     {
                         getline(inFile,inProp);
-                        if (i==spaceP1)
+                        if (i==spaceP[turn])
                             prop=inProp;
                     }
                     inFile.close();
-                    cout<<p1<<", you landed on "<<prop<<".\n"<<endl;
+                    cout<<p[turn]<<", you landed on "<<prop<<".\n"<<endl;
                     
                     //Who owns the property?
                     inFile.open("owners2Players.dat");
                     for (int i=1;i<=40;i++)
                     {
                         inFile>>inOwn;
-                        if (i==spaceP1)
+                        if (i==spaceP[turn])
                             owner=inOwn;
                     }
                     inFile.close();
@@ -204,12 +200,12 @@ int main(int argc, char** argv) {
                     switch (owner)
                     {
                         case 0:
-                            switch (spaceP1)
+                            switch (spaceP[turn])
                             {    
                                 case 5: //Income Tax
-                                    cout<<"You owe $200 in taxes.\n";
-                                    moneyP1-=200;
-                                    cout<<"You now have $"<<moneyP1<<" in your account.\n"<<endl;
+                                    cout<<"You owe $200 in taxes.\n"<<endl;
+                                    moneyP[turn]-=200;
+                                    chkBank(p,moneyP,turn);
                                     break;
                                 case 11: //Visiting the jailhouse
                                     cout<<"You're just visiting.\n"<<endl;
@@ -218,19 +214,19 @@ int main(int argc, char** argv) {
                                     cout<<"You were caught doing nefarious things "
                                         <<"and were sent to jail."<<endl;
                                     cout<<"Do not pass Go. Do not collect $200.\n";
-                                    spaceP1=11;
-                                    jailP1=true;
-                                    cout<<"You're in jail, "<<p1<<".\n"<<endl;
+                                    spaceP[turn]=11;
+                                    jailP[turn]=true;
+                                    cout<<"You're in jail, "<<p[turn]<<".\n"<<endl;
                                     break;
                                 case 39: //Luxury Tax
                                     cout<<"You owe $100 in taxes.\n";
-                                    moneyP1-=100;
-                                    cout<<"You now have $"<<moneyP1<<" in your account.\n"<<endl;
+                                    moneyP[turn]-=100;
+                                    chkBank(p,moneyP,turn);
                                     break;
                             }
                             //If player lands on Chance or Community Chest
-                            if (spaceP1==8||spaceP1==23||spaceP1==37
-                                    ||spaceP1==3||spaceP1==18||spaceP1==34)
+                            if (spaceP[turn]==8||spaceP[turn]==23||spaceP[turn]==37
+                                    ||spaceP[turn]==3||spaceP[turn]==18||spaceP[turn]==34)
                                 drawCrd(p,spaceP,moneyP,jailP,jCardP,numP,turn);
                             break;
                         case 1:
@@ -242,15 +238,15 @@ int main(int argc, char** argv) {
                             for (int i=1;i<=40;i++)
                             {
                                 inFile>>inFees;
-                                if (i==spaceP1)
+                                if (i==spaceP[turn])
                                     fees=inFees;
                             }
                             inFile.close();
-                            cout<<p2<<" owns that property. You owe $"
+                            cout<<p[2]<<" owns that property. You owe $"
                                 <<fees<<" in rent.\n";
-                            moneyP1-=fees; //pay 20 dollars
-                            moneyP2+=fees;
-                            cout<<"You have $"<<moneyP1<<" left in your account.\n"<<endl;
+                            moneyP[turn]-=fees; //pay 20 dollars
+                            moneyP[2]+=fees;
+                            chkBank(p,moneyP,turn);
                             break;
                     }
                     if (die1==die2) //If doubles rolled
@@ -261,7 +257,7 @@ int main(int argc, char** argv) {
                     else
                         doubles=0;
                 }
-                while(doubles>0&&doubles<3&&jailP1==false);
+                while(doubles>0&&doubles<3&&jailP[turn]==false);
                 if (doubles==3) //rolling doubles 3 times in a turn earns jail time
                 {
                     cout<<"You have been caught in a nefarious act (rolling 3 doubles)"
@@ -271,71 +267,27 @@ int main(int argc, char** argv) {
                         <<"pay $50 and get out of jail.\n";
                     cout<<"You may pay $50 or produce a Get Out of Jail Free"
                         <<" card at any time to get out of jail earlier.\n"<<endl;
-                    spaceP1=31;
-                    jailP1=true;
+                    spaceP[turn]=31;
+                    jailP[turn]=true;
                 }
             }
             doubles=0;
             turn=2;
         }
     //Player 2's turn
-        while (turn==2)
+        while (turn>=2)
         {
             cout<<"-------------------------------------------------------------"<<endl;
-            cout<<"It is "<<p[turn]<<"'s turn to play. Press enter to continue:\n"<<endl;
+            cout<<"It is "<<p[turn]<<"'s turn to play. Press enter to continue:\n";
             cin.get();
             if (jailP[turn]) //If Player is in jail, do this...
             {   
-                jTrnP2++; //Track how many times in a row the player is in jail
+                jTrnP[turn]++; //Track how many times in a row the player is in jail
                 cout<<p[turn]<<" is languishing behind bars."<<endl;
                 cout<<"It's time to get out of there!\n";
-                jChoice=(rand()%3)+1;
-                cout<<p[turn]<<" chooses to "
-                    <<(jChoice==1?"pay":jChoice==2?"use a card":"roll")<<".\n";
-                switch (jChoice)
-                {
-                    case '1': //Pay to get out of jail
-                        moneyP2-=50;
-                        cout<<p2<<" is freeeeeeee!!!!!!!!!!!!!!.\n"<<endl;
-                        jailP2=false;
-                        jTrnP2=0;
-                    case '2': //Use player's Get Out of Jail Free card
-                        cout<<p2<<" is out of jail!\n";
-                        jailP2=false;
-                        jTrnP2=0;
-                        jCardP2=0;
-                        break;
-                    case '3': //Roll to try to get out of jail
-                        cout<<"Encourage "<<p2<<" to roll the dice by pressing enter:\n"<<endl;
-                        cin.get();
-                        die1=(rand()%(6-1+1))+1;
-                        die2=(rand()%6)+1;
-                        if (die1==die2) //They roll doubles and are freed
-                        {
-                            cout<<p2<<" rolled a "<<die1<<" and a "<<die2<<".\n";
-                            cout<<"They rolled doubles and are released from jail.\n";
-                            cout<<p2<<", continues their turn as usual.\n"<<endl;
-                            jailP2=false;
-                            jTrnP2=0;
-                        }
-                        else if (die1!=die2 && (jTrnP2==1||jTrnP2==2)) //Didn't roll doubles & have tries left
-                        {
-                            cout<<p2<<" rolled a "<<die1<<" and a "<<die2<<".\n";
-                            cout<<"Too bad. They'll have to try again next turn.\n"<<endl;
-                        }
-                        else if (die1!=die2 && jTrnP2==3) //Didn't roll doubles but used all their tries
-                        {
-                            cout<<"No more tries left. "<<p2
-                                <<"pays $50 nd gets out of jail.\n";
-                            jailP2=false;
-                            jTrnP2=0;
-                            moneyP2-=50;
-                            cout<<p2<<" has $"<<moneyP2<<" remaining in their account.\n"<<endl;
-                        }
-                        break;
-                }
+                outJail(p,moneyP,jailP,jCardP,jTrnP,turn);
             }
-            else if (!jailP2)
+            else if (!jailP[turn])
             {
                 do //Players can roll doubles twice in a turn without penalty
                 {
@@ -343,21 +295,20 @@ int main(int argc, char** argv) {
                     die1=(rand()%(6-1+1))+1;
                     die2=(rand()%6)+1;
                     sumdie=die1+die2;
-                    spaceP2+=sumdie;
-                    cout<<p2<<" rolled a "<<die1<<" and a "<<die2
+                    spaceP[turn]+=sumdie;
+                    cout<<p[turn]<<" rolled a "<<die1<<" and a "<<die2
                         <<" and moved ahead "<<sumdie<<" spaces.\n"<<endl;
-                    if (spaceP2>BOARD) //go round the board
+                    if (spaceP[turn]>BOARD) //go round the board
                     {
-                        spaceP2-=BOARD;
-                        if (spaceP2==1)
+                        spaceP[turn]-=BOARD;
+                        if (spaceP[turn]==1)
                         {
-                            cout<<p2<<" landed on Go and collected $200.\n";
-                            moneyP2+=200;
+                            passGo(p,spaceP,moneyP,turn);;
                         }
                         else
                         {
-                            cout<<p1<<" passed Go and collected $200.\n";
-                            moneyP2+=200;
+                            cout<<p[turn]<<" passed Go and collected $200.\n";
+                            moneyP[turn]+=200;
                         }
                     }
                     
@@ -366,18 +317,18 @@ int main(int argc, char** argv) {
                     for (int i=1;i<=40;i++)
                     {
                         getline(inFile,inProp);
-                        if (i==spaceP2)
+                        if (i==spaceP[turn])
                             prop=inProp;
                     }
                     inFile.close();
-                    cout<<p2<<" landed on "<<prop<<".\n"<<endl;
+                    cout<<p[turn]<<" landed on "<<prop<<".\n"<<endl;
                     
                     //Who owns the property?
                     inFile.open("owners2Players.dat");
                     for (int i=1;i<=40;i++)
                     {
                         inFile>>inOwn;
-                        if (i==spaceP2)
+                        if (i==spaceP[turn])
                             owner=inOwn;
                     }
                     inFile.close();
@@ -386,71 +337,71 @@ int main(int argc, char** argv) {
                     switch (owner)
                     {
                         case 0:
-                            switch (spaceP2)
+                            switch (spaceP[turn])
                             {    
                                 case 5: //Income Tax
-                                    cout<<p2<<"owes $200 in taxes.\n";
-                                    moneyP2-=200;
+                                    cout<<p[turn]<<" owes $200 in taxes.\n"<<endl;
+                                    moneyP[turn]-=200;
                                     break;
                                 case 31: //Go to Jail
-                                    cout<<p2<<" was caught doing nefarious things "
+                                    cout<<p[turn]<<" was caught doing nefarious things "
                                         <<"and was sent to jail."<<endl;
                                     cout<<"Do not pass Go. Do not collect $200.\n";
-                                    spaceP2=11;
-                                    jailP2=true;
-                                    cout<<p2<<" is in jail.\n";
+                                    spaceP[turn]=11;
+                                    jailP[turn]=true;
+                                    cout<<p[turn]<<" is in jail.\n";
                                     break;
                                 case 39: //Luxury Tax
-                                    cout<<p2<<" owes $100 in taxes.\n";
-                                    moneyP2-=100;
+                                    cout<<p[turn]<<" owes $100 in taxes.\n";
+                                    moneyP[turn]-=100;
                                     break;
                             }
                             //If player lands on Chance or Community Chest
-                            if (spaceP2==8||spaceP2==23||spaceP2==37
-                                    ||spaceP2==3||spaceP2==18||spaceP2==34)
+                            if (spaceP[turn]==8||spaceP[turn]==23||spaceP[turn]==37
+                                    ||spaceP[turn]==3||spaceP[turn]==18||spaceP[turn]==34)
                                 drawCrd(p,spaceP,moneyP,jailP,jCardP,numP,turn);
                             break;
                         case 1:
-                            cout<<"You, the "<<p1<<", own that property and ";
+                            cout<<"You, "<<p[1]<<", own that property and ";
                             //How much are fees for that property?
                             inFile.open("taxesandRents.dat");
                             for (int i=1;i<=40;i++)
                             {
                                 inFile>>inFees;
-                                if (i==spaceP2)
+                                if (i==spaceP[turn])
                                     fees=inFees;
                             }
                             inFile.close();
-                            cout<<p2<<" owes you $"<<fees<<" in rent.\n";
-                            moneyP2-=fees; //pay 20 dollars
-                            moneyP1+=fees;
-                            cout<<"You now have $"<<moneyP1<<" in your account.\n"<<endl;
+                            cout<<p[turn]<<" owes you $"<<fees<<" in rent.\n"<<endl;
+                            moneyP[turn]-=fees; //pay 20 dollars
+                            moneyP[1]+=fees;
+                            cout<<"You now have $"<<moneyP[1]<<" in your account.\n"<<endl;
                             break;
                             break;
                         case 2:
-                            cout<<p2<<" owns this property.\n"<<endl;
+                            cout<<p[turn]<<" owns this property.\n"<<endl;
                             break;
                     }
                     if (die1==die2) //If doubles are rolled
                     {
                         doubles++;
-                        cout<<"Since "<<p2<<" rolled doubles, they'll roll again.\n"<<endl;
+                        cout<<"Since "<<p[turn]<<" rolled doubles, they'll roll again.\n"<<endl;
                     }
                     else
                         doubles=0;
                 }
-                while(doubles>0&&doubles<3&&jailP2==false);
+                while(doubles>0&&doubles<3&&jailP[turn]==false);
                 if (doubles==3) //rolling doubles 3 times in a turn earns jail time
                 {
-                    cout<<p2<<" has been caught in a nefarious act (rolling 3 doubles)"
+                    cout<<p[turn]<<" has been caught in a nefarious act (rolling 3 doubles)"
                         <<"and has been sent to jail.\n";
                     cout<<"They must stay in jail for 3 turns or until they roll doubles."<<endl
                         <<"If they do not roll doubles by the third turn, "
                         <<"they will pay $50 and get out of jail.\n";
                     cout<<"They may pay $50 or produce a Get Out of Jail Free"
                         <<" card at any time to get out of jail earlier.\n"<<endl;
-                    spaceP2=31;
-                    jailP2=true;
+                    spaceP[turn]=31;
+                    jailP[turn]=true;
                 }
             }
             doubles=0;
@@ -458,17 +409,17 @@ int main(int argc, char** argv) {
         }
     }
     //End the game
-    while (round<floor(60.87)&&moneyP1>0&&moneyP2>0);
-    if (round>=60)
+    while (round<floor(5.87)&&moneyP[1]>0&&moneyP[2]>0);
+    if (round>=5)
         cout<<endl<<"It's getting late and Player 2 needs a nap.\n";
-    if (moneyP1<=0)
-        cout<<"Player 1, "<<p1<<", is bankrupt!!\n";
-    if (moneyP2<=0)
-        cout<<"Player 2, "<<p2<<", is bankrupt!!\n";
+    if (moneyP[1]<=0)
+        cout<<"Player 1, "<<p[1]<<", is bankrupt!!\n";
+    if (moneyP[2]<=0)
+        cout<<"Player 2, "<<p[2]<<", is bankrupt!!\n";
     cout<<"----------------------------------------------------------------------"<<endl;
     cout<<endl<<endl<<setw(35)<<right<<"The game is over!"<<endl<<endl;
-    cout<<setw(42)<<right<<"Player 1 finished the game with $"<<moneyP1<<endl;
-    cout<<setw(42)<<right<<"Player 2 finished the game with $"<<moneyP2<<endl;
+    cout<<setw(42)<<right<<"Player 1 finished the game with $"<<moneyP[1]<<endl;
+    cout<<setw(42)<<right<<"Player 2 finished the game with $"<<moneyP[2]<<endl;
     
     //Exit stage right!
     return 0;
@@ -526,13 +477,19 @@ void strtMny(int money[],int numPlayers)
         money[i]=1500;
 }
 
-//* Fill jail and jailCard arrays so that all players start free
+//* Function to fill jail and jailCard arrays so that all players start free
 //* with no Get Out of Jail Free cards in hand
-//* Provide money array and number of individuals playing
 void startJl(bool jail[],int numPlayers)
 {
     for (int i=0;i<numPlayers;i++)
-        jail[i]=false;
+        jail[i]=false; //Players start free
+}
+
+//* Funtion to fill jail turn array to track how many turns a player is in jail
+void startJl(char jailTrn[],int numPlayers)
+{
+    for (int i=0;i<numPlayers;i++)
+        jailTrn[i]=0; //Players start free
 }
 
 //Function allows players to choose their game pieces

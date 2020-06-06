@@ -1,7 +1,7 @@
 /* 
  * File: main.cpp
  * Author: Sonya Smalley
- * Created on June 4, 2020, 4:37 PM
+ * Created on June 6, 2020, 12:06 PM
  * Purpose: Play a text-based pseudo version of Monopoly (version 5)
  */
 
@@ -40,7 +40,7 @@ void nPlayers(int& nPlayer);
 
 //* Fill space array so that all players start at Go (space 1)
 //* Provide space array and number of individuals playing
-void flSpace(short space[],int nPlayer);
+void flSpace(short space[],int nPlayer=MAXP);
 
 //* Fill money array so that all players start with $1500
 //* Provide money array and number of individuals playing
@@ -142,8 +142,6 @@ int main(int argc, char** argv) {
     srand(static_cast<unsigned int>(time(0)));
 
     //Declare Variable Data Types and Constants
-    ifstream inFile; //Bring in some files
-    ofstream outFile; //Create a file or two
     char choice; //To hold user choices
     long round, //Don't let this game go on for too long
          rndStrt; //Rounds start when the player who had the first turn has their turn
